@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaskFlow | Smart Productivity</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="container">
+    <header>
+      <div>
+        <div class="logo">Task<span>Flow</span> ✦</div>
+        <p class="tagline">Turn small actions into big achievements.</p>
+      </div>
+      <p id="date"></p>
+    </header>
+
+    <section class="hero">
+      <p class="eyebrow">YOUR PERSONAL PRODUCTIVITY SPACE</p>
+      <h1>Plan smart.<br><span>Achieve more.</span></h1>
+      <p>Create, organize and complete your daily goals in one beautiful workspace.</p>
+    </section>
+
+    <section class="stats">
+      <article><small>TOTAL TASKS</small><strong id="totalCount">0</strong></article>
+      <article><small>ACTIVE TASKS</small><strong id="activeCount">0</strong></article>
+      <article><small>COMPLETED</small><strong id="completedCount">0</strong></article>
+    </section>
+
+    <section class="progress-card">
+      <div><b>Daily Progress</b><span id="progressText">0%</span></div>
+      <div class="progress-track"><div id="progressFill"></div></div>
+    </section>
+
+    <section class="workspace">
+      <aside class="panel">
+        <h2 id="formTitle">Create a task ✨</h2>
+        <form id="taskForm">
+          <label>Task title</label>
+          <input id="taskInput" type="text" placeholder="e.g. Practice JavaScript" required>
+          <label>Category</label>
+          <select id="category">
+            <option>Study</option><option>Work</option><option>Personal</option>
+          </select>
+          <label>Priority</label>
+          <select id="priority">
+            <option>High</option><option selected>Medium</option><option>Low</option>
+          </select>
+          <button class="primary" id="submitBtn">＋ Add Task</button>
+          <button class="secondary hidden" type="button" id="cancelBtn">Cancel Edit</button>
+        </form>
+      </aside>
+
+      <section class="panel">
+        <div class="section-heading">
+          <h2>Your tasks 📋</h2>
+          <input id="searchInput" class="search" placeholder="Search tasks...">
+        </div>
+        <div class="filters">
+          <button class="filter active" data-filter="all">All</button>
+          <button class="filter" data-filter="active">Active</button>
+          <button class="filter" data-filter="completed">Completed</button>
+        </div>
+        <div id="taskList" class="task-list"></div>
+      </section>
+    </section>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>
