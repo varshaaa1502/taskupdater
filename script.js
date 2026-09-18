@@ -1,5 +1,14 @@
 const STORAGE_KEY = "taskflow_tasks";
-let tasks = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+
+let tasks = [];
+try {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  tasks = saved ? JSON.parse(saved) : [];
+  if (!Array.isArray(tasks)) tasks = [];
+} catch (e) {
+  tasks = [];
+}
+
 let filter = "all";
 let editingId = null;
 
@@ -8,27 +17,40 @@ const form = $("taskForm"), titleInput = $("taskInput");
 const categoryInput = $("category"), priorityInput = $("priority");
 const taskList = $("taskList"), searchInput = $("searchInput");
 
-function saveTasks(){localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));}
-function getVisibleTasks(){
+function saveTasks() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+  } catch (e) {
+    console.error("Failed to save tasks:", e);
+  }
+}
+
+function getVisibleTasks() {
   const query = searchInput.value.toLowerCase().trim();
   return tasks.filter(task => {
-    const matchesFilter = filter === "all" || (filter === "active" ? !task.completed : task.completed);
-    return matchesFilter && task.title.toLowerCase().includes(query);
+    const matchesFilter =
+      filter === "all" ||
+      (filter === "active" ? !task.completed : Boolean(task.completed));
+    const matchesQuery = !query || (task.title && task.title.toLowerCase().includes(query));
+    return matchesFilter && matchesQuery;
   });
 }
-function updateStats(){
-  const total = tasks.length, completed = tasks.filter(t=>t.completed).length;
+
+function updateStats() {
+  const total = tasks.length;
+  const completed = tasks.filter(t => t.completed).length;
   $("totalCount").textContent = total;
-  $("activeCount").textContent = total-completed;
+  $("activeCount").textContent = total - completed;
   $("completedCount").textContent = completed;
-  const progress = total ? Math.round(completed/total*100) : 0;
-  $("progressText").textContent = progress+"%";
-  $("progressFill").style.width = progress+"%";
+  const progress = total ? Math.round((completed / total) * 100) : 0;
+  $("progressText").textContent = progress + "%";
+  $("progressFill").style.width = progress + "%";
 }
-function renderTasks(){
+
+function renderTasks() {
   taskList.innerHTML = "";
   const visible = getVisibleTasks();
-  if(!visible.length){
+  if (!visible.length) {
     taskList.innerHTML = '<div class="empty"><b>🌱</b>No tasks found.<br><small>Add a task and start making progress.</small></div>';
     return;
   }
@@ -56,51 +78,107 @@ function renderTasks(){
     taskList.appendChild(item);
   });
 }
+
+function resetEditState() {
+  editingId = null;
+  form.reset();
+  $("submitBtn").textContent = "＋ Add Task";
+  $("cancelBtn").classList.add("hidden");
+  $("formTitle").textContent = "Create a task ✨";
+}
+
 form.addEventListener("submit", e => {
   e.preventDefault();
   const title = titleInput.value.trim();
-  if(!title) return;
-  if(editingId !== null){
-    const task = tasks.find(t=>t.id===editingId);
-    Object.assign(task,{title,category:categoryInput.value,priority:priorityInput.value});
-    editingId = null;
-    $("submitBtn").textContent = "＋ Add Task";
-    $("cancelBtn").classList.add("hidden");
-    $("formTitle").textContent = "Create a task ✨";
-  }else{
-    tasks.unshift({id:Date.now(),title,category:categoryInput.value,priority:priorityInput.value,completed:false});
+  if (!title) return;
+
+  if (editingId !== null) {
+    const task = tasks.find(t => t.id === editingId);
+    if (task) {
+      Object.assign(task, {
+        title,
+        category: categoryInput.value,
+        priority: priorityInput.value
+      });
+    }
+    resetEditState();
+  } else {
+    tasks.unshift({
+      id: Date.now(),
+      title,
+      category: categoryInput.value,
+      priority: priorityInput.value,
+      completed: false
+    });
+    form.reset();
   }
-  form.reset(); saveTasks(); renderTasks(); updateStats();
+  saveTasks();
+  renderTasks();
+  updateStats();
 });
+
 taskList.addEventListener("click", e => {
-  const button = e.target.closest("[data-action]");
-  if(!button) return;
-  const item = button.closest(".task"), id = Number(item.dataset.id);
-  const task = tasks.find(t=>t.id===id);
-  if(button.dataset.action==="delete") tasks = tasks.filter(t=>t.id!==id);
-  if(button.dataset.action==="edit"){
-    titleInput.value=task.title; categoryInput.value=task.category; priorityInput.value=task.priority;
-    editingId=id; $("submitBtn").textContent="Save Changes"; $("cancelBtn").classList.remove("hidden");
-    $("formTitle").textContent="Edit your task ✏️"; titleInput.focus(); return;
+  const button = e.target.closest("button[data-action]");
+  if (!button) return;
+  const item = button.closest(".task");
+  if (!item) return;
+  const id = Number(item.dataset.id);
+  const task = tasks.find(t => t.id === id);
+  if (!task) return;
+
+  if (button.dataset.action === "delete") {
+    tasks = tasks.filter(t => t.id !== id);
+    if (editingId === id) {
+      resetEditState();
+    }
+    saveTasks();
+    renderTasks();
+    updateStats();
+  } else if (button.dataset.action === "edit") {
+    titleInput.value = task.title;
+    categoryInput.value = task.category;
+    priorityInput.value = task.priority;
+    editingId = id;
+    $("submitBtn").textContent = "Save Changes";
+    $("cancelBtn").classList.remove("hidden");
+    $("formTitle").textContent = "Edit your task ✏️";
+    titleInput.focus();
   }
-  saveTasks(); renderTasks(); updateStats();
 });
+
 taskList.addEventListener("change", e => {
-  if(e.target.dataset.action!=="toggle") return;
-  const id=Number(e.target.closest(".task").dataset.id);
-  const task=tasks.find(t=>t.id===id); task.completed=e.target.checked;
-  saveTasks(); renderTasks(); updateStats();
+  if (e.target.dataset.action !== "toggle") return;
+  const item = e.target.closest(".task");
+  if (!item) return;
+  const id = Number(item.dataset.id);
+  const task = tasks.find(t => t.id === id);
+  if (!task) return;
+
+  task.completed = e.target.checked;
+  saveTasks();
+  renderTasks();
+  updateStats();
 });
+
 document.querySelector(".filters").addEventListener("click", e => {
-  const button=e.target.closest("[data-filter]"); if(!button) return;
-  filter=button.dataset.filter;
-  document.querySelectorAll(".filter").forEach(b=>b.classList.remove("active"));
-  button.classList.add("active"); renderTasks();
+  const button = e.target.closest("[data-filter]");
+  if (!button) return;
+  filter = button.dataset.filter;
+  document.querySelectorAll(".filter").forEach(b => b.classList.remove("active"));
+  button.classList.add("active");
+  renderTasks();
 });
+
 searchInput.addEventListener("input", renderTasks);
-$("cancelBtn").addEventListener("click",()=>{
-  editingId=null; form.reset(); $("submitBtn").textContent="＋ Add Task";
-  $("cancelBtn").classList.add("hidden"); $("formTitle").textContent="Create a task ✨";
+
+$("cancelBtn").addEventListener("click", resetEditState);
+
+$("date").textContent = new Date().toLocaleDateString("en-IN", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  year: "numeric"
 });
-$("date").textContent=new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
-renderTasks(); updateStats();
+
+renderTasks();
+updateStats();
